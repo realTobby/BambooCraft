@@ -10,6 +10,7 @@ namespace BambooCraft
 {
     public class Networking
     {
+        private PacketHandler myPacketHandler = new PacketHandler();
         private bool isExcpetionLoggingEnabled = true;
         private byte[] _buffer = new byte[1024];
         private List<Socket> _clientSockets = new List<Socket>();
@@ -68,35 +69,51 @@ namespace BambooCraft
                 return;
             }
 
-            byte[] dataBuffer = new byte[recieved];
-            Array.Copy(_buffer, dataBuffer, recieved);
-
-            string text = Encoding.UTF8.GetString(dataBuffer);
-
-
-
-            myLogger.Log(Severity.Packet, text);
-            try
+            byte[] receivedData = new byte[recieved];
+            Array.Copy(_buffer, receivedData, recieved);
+            
+            myPacketHandler.ReadPacket(receivedData);
+            byte[] responseData = myPacketHandler.GetResponse();
+            if(myPacketHandler.isSendable == true)
             {
-                clientConnection.BeginSend(dataBuffer, 0, dataBuffer.Length, SocketFlags.None, new AsyncCallback(SendCallbackAsync), clientConnection);
-                clientConnection.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(RecieveCallbackAsync), clientConnection);
+                try
+                {
+                    clientConnection.BeginSend(responseData, 0, responseData.Length, SocketFlags.None, new AsyncCallback(SendCallbackAsync), clientConnection);
+                    clientConnection.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(RecieveCallbackAsync), clientConnection);
+                }
+                catch (SocketException se)
+                {
+                    if (isExcpetionLoggingEnabled == true)
+                        myLogger.Log(Severity.Exception, "(SE-RECEIVE) " + se.Message);
+                }
+                catch (ObjectDisposedException ode)
+                {
+                    if (isExcpetionLoggingEnabled == true)
+                        myLogger.Log(Severity.Exception, "(ODE-RECEIVE) " + ode.Message);
+                }
             }
-            catch(SocketException se)
+            else
             {
-                if (isExcpetionLoggingEnabled == true)
-                    myLogger.Log(Severity.Exception, "(SE-RECEIVE) " + se.Message);
+                myLogger.Log(Severity.Network, "NO RESPONSE SENT TO LAST PACKET!");
             }
-            catch(ObjectDisposedException ode)
-            {
-                if (isExcpetionLoggingEnabled == true)
-                    myLogger.Log(Severity.Exception, "(ODE-RECEIVE) " + ode.Message);
-            }
+            
         }
 
         private void SendCallbackAsync(IAsyncResult ar)
         {
             Socket clientConnection = (Socket)ar.AsyncState;
-            clientConnection.EndSend(ar);
+            int sent = clientConnection.EndSend(ar);
+            if(sent <= 0)
+            {
+                return;
+            }
+            else
+            {
+                myLogger.Log(Severity.Network, "RESPONSE SENT! (" + sent + ")");
+            }
+
+
+            
         }
 
     }

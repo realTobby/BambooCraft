@@ -21,7 +21,7 @@ namespace BambooCraft
 #else
                  currentMode = "[RELEASE]"; 
 #endif
-            Console.WriteLine("BambooCraft " + currentMode);
+            Console.WriteLine("BambooCraft by Tobby" + currentMode);
 
             Networking bambooCraft = new Networking(new Logging());
             bambooCraft.SetupServer();
