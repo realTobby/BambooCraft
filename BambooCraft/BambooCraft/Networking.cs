@@ -54,7 +54,7 @@ namespace BambooCraft
         {
             Socket newConnection = _serverSocket.EndAccept(ar);
             _clientSockets.Add(newConnection);
-            myLogger.Log(Severity.Network, "Socket Callback");
+            myLogger.Log(Severity.Network, "Client connected to Socket");
             newConnection.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(RecieveCallbackAsync), newConnection);
             _serverSocket.BeginAccept(new AsyncCallback(AcceptCallbackAsync), null);
         }

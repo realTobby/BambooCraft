@@ -10,21 +10,23 @@ namespace BambooCraft
 {
     public static class Tools
     {
-        public static int ReadVarInt(NetworkStream stream)
+        public static int ReadVarInt(byte data)
         {
-            var value = 0;
-            var size = 0;
-            int b;
-
-            while (((b = stream.ReadByte()) & 0x80) == 0x80)
+            int numRead = 0;
+            int result = 0;
+            do
             {
-                value |= (b & 0x7F) << (size++ * 7);
-                if (size > 5)
+                int value = (data & 0b01111111);
+                result |= (value << (7 * numRead));
+
+                numRead++;
+                if (numRead > 5)
                 {
-                    throw new IOException("VarInt too long. Hehe that's punny.");
+                    throw new Exception("VarInt is too big");
                 }
-            }
-            return value | ((b & 0x7F) << (size * 7));
+            } while ((data & 0b10000000) != 0);
+
+            return result;
         }
 
         public static byte writeVarInt(int value)

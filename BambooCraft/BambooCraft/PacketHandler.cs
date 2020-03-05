@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using BambooCraft.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,24 +21,40 @@ namespace BambooCraft
 
         public void ReadPacket(byte[] packetData)
         {
+            PacketFormatModel nextPacket = new PacketFormatModel();
+            nextPacket.PacketLength = Tools.ReadVarInt(packetData[0]);
+            nextPacket.PacketID = Tools.ReadVarInt(packetData[packetData.Length - nextPacket.PacketLength]);
+            Array.Copy(packetData, packetData.Length - nextPacket.PacketLength-1, nextPacket.PacketData, 0, nextPacket.PacketLength);
+
             isSendable = false;
-            dataToSend = packetData; // FOO
-            string packetInfo = Encoding.UTF8.GetString(packetData);
+            int packetID = Tools.ReadVarInt(packetData[1]);
+            string packetInfo = "{ID: " + packetID + "} " + Encoding.UTF8.GetString(packetData);
             bool packetFound = false;
 
-            int possiblePackID = Tools.ReadVarInt(packetData[0]);
-
-
-            switch (packetData[0])
+            switch(packetID)
             {
-                case 0xFE: // 254  ==> Legacy Server Ping
-                    packetInfo = "(LegacyPing) >> " + packetInfo + " (Didnt care, nothing sent)";
-                    //WorkLegacyPingPacket();
+                case 0: // HANDSHAKE
                     packetFound = true;
-                    isSendable = true;
-                    break;
+                    packetInfo = "HANDSHAKE PACKET RECEIVED! " + packetInfo;
+                    isSendable = false; // NOTHING IMPLEMENTED YET
 
+                    int protocolVersion = Tools.ReadVarInt(packetData[2]);
+
+                    break;
             }
+
+
+
+            //switch (packetData[0])
+            //{
+            //    case 0xFE: // 254  ==> Legacy Server Ping
+            //        packetInfo = " (LegacyPing) >> " + packetInfo;
+            //        //WorkLegacyPingPacket();
+            //        packetFound = true;
+            //        isSendable = true;
+            //        break;
+
+            //}
             
             if(packetFound == false)
             {
@@ -46,6 +63,8 @@ namespace BambooCraft
             myLogger.Log(Severity.Packet, packetInfo);
 
         }
+
+
 
         
 
