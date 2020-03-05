@@ -8,9 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-
-
-
 namespace BambooCraft
 {
     class Program
@@ -26,8 +23,10 @@ namespace BambooCraft
 #endif
             Console.WriteLine("BambooCraft " + currentMode);
 
-            SocketListener bambooCraftServer = new SocketListener();
-            bambooCraftServer.StartListening();
+            Networking bambooCraft = new Networking(new Logging());
+            bambooCraft.SetupServer();
+            Console.ReadLine();
+
         }
     }
 }
