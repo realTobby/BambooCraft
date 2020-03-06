@@ -72,7 +72,7 @@ namespace BambooCraft
             byte[] receivedData = new byte[recieved];
             Array.Copy(_buffer, receivedData, recieved);
             
-            myPacketHandler.ReadPacket(receivedData);
+            myPacketHandler.NextPacket(receivedData);
             byte[] responseData = myPacketHandler.GetResponse();
             if(myPacketHandler.isSendable == true)
             {
