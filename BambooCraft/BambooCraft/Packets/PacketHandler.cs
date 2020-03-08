@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,24 +13,25 @@ namespace BambooCraft.Packets
     {
         private Logging myLogger = new Logging();
 
-        private byte[] packetData = new byte[4049];
-        private int packetSize = 0;
-        private int packetID = -1;
-        private string packetInfo = "UNKNOWN PACKET";
-        private byte[] packetResponse = new byte[4049];
+        public byte[] BufferedData = new byte[4096];
+        private int _lastByte;
+        public int Size = 0;
 
         public bool IsValidPacket = false;
         public int lastByteIndex = 0;
 
         public List<byte> responseData = new List<byte>();
 
-        internal void ReadPacket(byte[] receivedData)
+		private readonly List<byte> _bffr = new List<byte>();
+
+		internal void ReadPacket(byte[] receivedData)
         {
-            packetData = receivedData;
+			IsValidPacket = false;
+			BufferedData = receivedData;
             // TODO READ PACKET HERE <---------->
 
-            packetSize = readVarInt();
-            packetID = readVarInt();
+            var packetSize = ReadVarInt();
+            var packetID = ReadVarInt();
 
             myLogger.Log(Severity.Packet, "Reading packet...");
             myLogger.Log(Severity.Packet, "Packet: " + packetID.ToString("X2") + " Size: " + packetSize);
@@ -39,196 +41,407 @@ namespace BambooCraft.Packets
                 case 0:
                     myLogger.Log(Severity.Packet, "Handshake-Packet!");
 
-                    var protocol = readVarInt();
+                    var protocol = ReadVarInt();
                     string host = ReadString();
                     ushort port = ReadUShort();
-                    var nextState = readVarInt();
+                    var nextState = ReadVarInt();
 
                     
                     IsValidPacket = true;
-                    packetInfo = "Handshake";
 
                     switch(nextState)
                     {
                         case 1:
+                            responseData.Clear();
+                            responseData = new List<byte>();
                             // status request
-                            packetResponse = HandshakeResponse();
+                            myLogger.Log(Severity.Packet, "Building PingPayload...");
+                            PingPayload pl = new PingPayload();
+                            VersionPayload vpl = new VersionPayload();
+                            vpl.name = "1.15.2";
+                            vpl.protocol = 578;
+                            pl.vpl = vpl;
+
+                            PlayerPayload ppl = new PlayerPayload();
+                            ppl.max = 10;
+                            ppl.online = 0;
+                            ppl.sample = new List<Player>();
+                            pl.ppl = ppl;
+
+                            DescriptionPayload dpl = new DescriptionPayload();
+                            dpl.text = "Test";
+                            pl.dpl = dpl;
+
+                            pl.favicon = "data:image/png;base64,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";
+
+                            string json = JsonConvert.SerializeObject(pl);
+                            byte[] packetData = Encoding.UTF8.GetBytes(json);
+                            Utils.HexDump.DumpHex(packetData);
+
+							WriteVarInt(packetData.Length + 2);
+							WriteVarInt(0);
+							WriteString(json);
+
+
                             break;
                         case 2:
-                            // login request
-                            break;
+							// login request
+							IsValidPacket = false;
+							break;
                     }
-
                     break;
             }
-        }
-        private byte[] HandshakeResponse()
-        {
-            myLogger.Log(Severity.Packet, "Building PingPayload...");
-            PingPayload pl = new PingPayload();
-            VersionPayload vpl = new VersionPayload();
-            vpl.name = "1.15.2";
-            vpl.protocol = 578;
-            pl.vpl = vpl;
+            System.IO.File.WriteAllText("hexdump.txt", Utils.HexDump.DumpHex(responseData.ToArray()));
 
-            PlayerPayload ppl = new PlayerPayload();
-            ppl.max = 10;
-            ppl.online = 0;
-            ppl.sample = new List<Player>();
-            pl.ppl = ppl;
-
-            DescriptionPayload dpl = new DescriptionPayload();
-            dpl.text = "Test";
-            pl.dpl = dpl;
-
-            pl.favicon = "data:image/png;base64,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";
-
-
-            string json = JsonConvert.SerializeObject(pl);
-            System.IO.File.WriteAllText("lastJSON.txt", json);
-            byte[] dataToSend = Encoding.UTF8.GetBytes(json);
-
-            WriteString(json);
-
-            return dataToSend;
         }
 
-        public void WriteString(string data)
-        {
-            responseData.Clear();
-            responseData = new List<byte>();
-            var stringData = Encoding.UTF8.GetBytes(data);
-            WriteVarInt(stringData.Length);
-            Write(stringData);
-        }
+		public void SetDataSize(int size)
+		{
+			Array.Resize(ref BufferedData, size);
+			Size = size;
+		}
 
-        public void Write(byte[] data, int offset, int length)
-        {
-            for (var i = 0; i < length; i++)
-            {
-                responseData.Add(data[i + offset]);
-            }
-        }
+		public void Dispose()
+		{
+			BufferedData = null;
+			_lastByte = 0;
+		}
 
-        public void Write(byte[] data)
-        {
-            foreach (var i in data)
-            {
-                responseData.Add(i);
-            }
-        }
+		#region Reader
 
-        public void WriteVarInt(int integer)
-        {
-            while ((integer & -128) != 0)
-            {
-                responseData.Add((byte)(integer & 127 | 128));
-                integer = (int)(((uint)integer) >> 7);
-            }
-            responseData.Add((byte)integer);
-        }
+		public int ReadByte()
+		{
+			var returnData = BufferedData[_lastByte];
+			_lastByte++;
+			return returnData;
+		}
 
-        internal byte[] GetResponse()
-        {
-            if(packetID == 0)
-            {
-                return responseData.ToArray();
-            }
+		public byte[] Read(int length)
+		{
+			var buffered = new byte[length];
+			Array.Copy(BufferedData, _lastByte, buffered, 0, length);
+			_lastByte += length;
+			return buffered;
+		}
 
 
-            return packetResponse;
-        }
+		public int ReadInt()
+		{
+			var dat = Read(4);
+			var value = BitConverter.ToInt32(dat, 0);
+			return IPAddress.NetworkToHostOrder(value);
+		}
 
-        public ushort ReadUShort()
-        {
-            var da = Read(2);
-            return NetworkToHostOrder(BitConverter.ToUInt16(da, 0));
-        }
+		public float ReadFloat()
+		{
+			var almost = Read(4);
+			var f = BitConverter.ToSingle(almost, 0);
+			return NetworkToHostOrder(f);
+		}
 
-        public int readVarInt()
-        {
-            int numRead = 0;
-            int result = 0;
-            byte read;
-            do
-            {
-                read = ReadByte();
-                int value = (read & 0b01111111);
-                result |= (value << (7 * numRead));
+		public bool ReadBool()
+		{
+			var answer = ReadByte();
+			if (answer == 1)
+				return true;
+			return false;
+		}
 
-                numRead++;
-                if (numRead > 5)
-                {
-                    throw new Exception("VarInt is too big");
-                }
-            } while ((read & 0b10000000) != 0);
+		public double ReadDouble()
+		{
+			var almostValue = Read(8);
+			return NetworkToHostOrder(almostValue);
+		}
 
-            return result;
-        }
+		public int ReadVarInt()
+		{
+			var value = 0;
+			var size = 0;
+			int b;
+			while (((b = ReadByte()) & 0x80) == 0x80)
+			{
+				value |= (b & 0x7F) << (size++ * 7);
+				if (size > 5)
+				{
+					throw new Exception("VarInt too long. Hehe that's punny.");
+				}
+			}
+			return value | ((b & 0x7F) << (size * 7));
+		}
 
-        public string ReadString()
-        {
-            var length = readVarInt();
-            var stringValue = Read(length);
-            return Encoding.UTF8.GetString(stringValue);
-        }
+		public long ReadVarLong()
+		{
+			var value = 0;
+			var size = 0;
+			int b;
+			while (((b = ReadByte()) & 0x80) == 0x80)
+			{
+				value |= (b & 0x7F) << (size++ * 7);
+				if (size > 10)
+				{
+					throw new Exception("VarLong too long. That's what she said.");
+				}
+			}
+			return value | ((b & 0x7F) << (size * 7));
+		}
 
-        public byte[] Read(int length)
-        {
-            var buffered = new byte[length];
-            Array.Copy(packetData, lastByteIndex, buffered, 0, length);
-            lastByteIndex += length;
-            return buffered;
-        }
+		public short ReadShort()
+		{
+			var da = Read(2);
+			var d = BitConverter.ToInt16(da, 0);
+			return IPAddress.NetworkToHostOrder(d);
+		}
 
-        public byte ReadByte()
-        {
-            byte nextByte = packetData[lastByteIndex];
-            lastByteIndex++;
-            return nextByte;
-        }
+		public ushort ReadUShort()
+		{
+			var da = Read(2);
+			return NetworkToHostOrder(BitConverter.ToUInt16(da, 0));
+		}
 
-        public void Refresh()
-        {
-            packetData = new byte[4069];
-            lastByteIndex = 0;
-            packetID = -1;
-            packetInfo = "UNKNOWN PACKET";
-            packetSize = 0;
-        }
+		public ushort[] ReadUShort(int count)
+		{
+			var us = new ushort[count];
+			for (var i = 0; i < us.Length; i++)
+			{
+				var da = Read(2);
+				var d = BitConverter.ToUInt16(da, 0);
+				us[i] = d;
+			}
+			return NetworkToHostOrder(us);
+		}
 
-        private double NetworkToHostOrder(byte[] data)
-        {
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(data);
-            }
-            return BitConverter.ToDouble(data, 0);
-        }
+		public ushort[] ReadUShortLocal(int count)
+		{
+			var us = new ushort[count];
+			for (var i = 0; i < us.Length; i++)
+			{
+				var da = Read(2);
+				var d = BitConverter.ToUInt16(da, 0);
+				us[i] = d;
+			}
+			return us;
+		}
 
-        private float NetworkToHostOrder(float network)
-        {
-            var bytes = BitConverter.GetBytes(network);
+		public short[] ReadShortLocal(int count)
+		{
+			var us = new short[count];
+			for (var i = 0; i < us.Length; i++)
+			{
+				var da = Read(2);
+				var d = BitConverter.ToInt16(da, 0);
+				us[i] = d;
+			}
+			return us;
+		}
 
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(bytes);
+		public string ReadString()
+		{
+			var length = ReadVarInt();
+			var stringValue = Read(length);
 
-            return BitConverter.ToSingle(bytes, 0);
-        }
+			return Encoding.UTF8.GetString(stringValue);
+		}
 
-        private ushort[] NetworkToHostOrder(ushort[] network)
-        {
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(network);
-            return network;
-        }
+		public long ReadLong()
+		{
+			var l = Read(8);
+			return IPAddress.NetworkToHostOrder(BitConverter.ToInt64(l, 0));
+		}
 
-        private ushort NetworkToHostOrder(ushort network)
-        {
-            var net = BitConverter.GetBytes(network);
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(net);
-            return BitConverter.ToUInt16(net, 0);
-        }
-    }
+		//public Vector3 ReadPosition()
+		//{
+		//	var val = ReadLong();
+		//	var x = Convert.ToDouble(val >> 38);
+		//	var y = Convert.ToDouble((val >> 26) & 0xFFF);
+		//	var z = Convert.ToDouble(val << 38 >> 38);
+		//	return new Vector3(x, y, z);
+		//}
+
+		private double NetworkToHostOrder(byte[] data)
+		{
+			if (BitConverter.IsLittleEndian)
+			{
+				Array.Reverse(data);
+			}
+			return BitConverter.ToDouble(data, 0);
+		}
+
+		private float NetworkToHostOrder(float network)
+		{
+			var bytes = BitConverter.GetBytes(network);
+
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			return BitConverter.ToSingle(bytes, 0);
+		}
+
+		private ushort[] NetworkToHostOrder(ushort[] network)
+		{
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(network);
+			return network;
+		}
+
+		private ushort NetworkToHostOrder(ushort network)
+		{
+			var net = BitConverter.GetBytes(network);
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(net);
+			return BitConverter.ToUInt16(net, 0);
+		}
+
+		public byte[] ExportWriter
+		{
+			get { return _bffr.ToArray(); }
+		}
+
+		
+
+		public void Write(byte[] data, int offset, int length)
+		{
+			for (var i = 0; i < length; i++)
+			{
+				_bffr.Add(data[i + offset]);
+			}
+		}
+
+		public void Write(byte[] data)
+		{
+			foreach (var i in data)
+			{
+				_bffr.Add(i);
+			}
+		}
+
+		//public void WritePosition(Vector3 position)
+		//{
+		//	var x = Convert.ToInt64(position.X);
+		//	var y = Convert.ToInt64(position.Y);
+		//	var z = Convert.ToInt64(position.Z);
+		//	var toSend = ((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF);
+		//	WriteLong(toSend);
+		//}
+
+		public void WriteVarInt(int integer)
+		{
+			while ((integer & -128) != 0)
+			{
+				_bffr.Add((byte)(integer & 127 | 128));
+				integer = (int)(((uint)integer) >> 7);
+			}
+			_bffr.Add((byte)integer);
+		}
+
+		public void WriteVarLong(long i)
+		{
+			var fuck = i;
+			while ((fuck & ~0x7F) != 0)
+			{
+				_bffr.Add((byte)((fuck & 0x7F) | 0x80));
+				fuck >>= 7;
+			}
+			_bffr.Add((byte)fuck);
+		}
+
+		public void WriteInt(int data)
+		{
+			var buffer = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(data));
+			Write(buffer);
+		}
+
+		public void WriteString(string data)
+		{
+			var stringData = Encoding.UTF8.GetBytes(data);
+			WriteVarInt(stringData.Length);
+			Write(stringData);
+		}
+
+		public void WriteShort(short data)
+		{
+			var shortData = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(data));
+			Write(shortData);
+		}
+
+		public void WriteUShort(ushort data)
+		{
+			var uShortData = BitConverter.GetBytes(data);
+			Write(uShortData);
+		}
+
+		public void WriteByte(byte data)
+		{
+			_bffr.Add(data);
+		}
+
+		public void WriteBool(bool data)
+		{
+			Write(BitConverter.GetBytes(data));
+		}
+
+		public void WriteDouble(double data)
+		{
+			Write(HostToNetworkOrder(data));
+		}
+
+		public void WriteFloat(float data)
+		{
+			Write(HostToNetworkOrder(data));
+		}
+
+		public void WriteLong(long data)
+		{
+			Write(BitConverter.GetBytes(IPAddress.HostToNetworkOrder(data)));
+		}
+
+		public void WriteUuid(Guid uuid)
+		{
+			var guid = uuid.ToByteArray();
+			var long1 = new byte[8];
+			var long2 = new byte[8];
+			Array.Copy(guid, 0, long1, 0, 8);
+			Array.Copy(guid, 8, long2, 0, 8);
+			Write(long1);
+			Write(long2);
+		}
+
+		private byte[] GetVarIntBytes(int integer)
+		{
+			List<Byte> bytes = new List<byte>();
+			while ((integer & -128) != 0)
+			{
+				bytes.Add((byte)(integer & 127 | 128));
+				integer = (int)(((uint)integer) >> 7);
+			}
+			bytes.Add((byte)integer);
+			return bytes.ToArray();
+		}
+
+		private byte[] HostToNetworkOrder(double d)
+		{
+			var data = BitConverter.GetBytes(d);
+
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(data);
+
+			return data;
+		}
+
+		private byte[] HostToNetworkOrder(float host)
+		{
+			var bytes = BitConverter.GetBytes(host);
+
+			if (BitConverter.IsLittleEndian)
+				Array.Reverse(bytes);
+
+			return bytes;
+		}
+
+		public byte[] GetResponse()
+		{
+			System.IO.File.WriteAllText("hexdump.txt", Utils.HexDump.DumpHex(_bffr.ToArray()));
+			return _bffr.ToArray();
+		}
+	}
 }
+#endregion

@@ -12,7 +12,7 @@ namespace BambooCraft
     public class Networking
     {
         private PacketHandler myPacketHandler = new PacketHandler();
-
+        private int packetCounter = 0;
         private bool isExcpetionLoggingEnabled = true;
         private byte[] _buffer = new byte[9999];
         private List<Socket> _clientSockets = new List<Socket>();
@@ -56,7 +56,8 @@ namespace BambooCraft
         {
             Socket newConnection = _serverSocket.EndAccept(ar);
             _clientSockets.Add(newConnection);
-            myLogger.Log(Severity.Network, "Incoming Packet...");
+            myLogger.Log(Severity.Network, "[" + packetCounter  + "] Incoming Packet...");
+            packetCounter++;
             newConnection.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(RecieveCallbackAsync), newConnection);
             _serverSocket.BeginAccept(new AsyncCallback(AcceptCallbackAsync), null);
         }
@@ -84,7 +85,6 @@ namespace BambooCraft
                 try
                 {
                     clientConnection.BeginSend(responseData, 0, responseData.Length, SocketFlags.None, new AsyncCallback(SendCallbackAsync), clientConnection);
-                    myPacketHandler.Refresh();
                     clientConnection.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, new AsyncCallback(RecieveCallbackAsync), clientConnection);
                 }
                 catch (SocketException se)
@@ -98,8 +98,10 @@ namespace BambooCraft
                         myLogger.Log(Severity.Exception, "(ODE-RECEIVE) " + ode.Message);
                 }
             }
-
-            myPacketHandler.Refresh();
+            else
+            {
+                myLogger.Log(Severity.Error, "Last Packet is unknown, it was not handled!");
+            }
         }
 
         private void SendCallbackAsync(IAsyncResult ar)

@@ -7,39 +7,38 @@ using System.Threading.Tasks;
 
 namespace BambooCraft.Models
 {
-    
     public class PingPayload
     {
         [JsonProperty(PropertyName = "version")]
-        public VersionPayload vpl = new VersionPayload();
+        public VersionPayload vpl { get; set; }  = new VersionPayload();
         [JsonProperty(PropertyName = "players")]
-        public PlayerPayload ppl = new PlayerPayload();
+        public PlayerPayload ppl { get; set; }  = new PlayerPayload();
         [JsonProperty(PropertyName = "description")]
-        public DescriptionPayload dpl = new DescriptionPayload();
-        public string favicon = "";
+        public DescriptionPayload dpl { get; set; } = new DescriptionPayload();
+        public string favicon { get; set; }  = "";
     }
     public class VersionPayload
     {
-        public string name = "";
-        public int protocol = 0;
+        public string name { get; set; } = "";
+        public int protocol { get; set; }  = 0;
     }
 
     public class PlayerPayload
     {
-        public int max = 0;
-        public int online = 0;
-        public List<Player> sample = new List<Player>();
+        public int max { get; set; }  = 0;
+        public int online { get; set; }  = 0;
+        public List<Player> sample { get; set; }  = new List<Player>();
     }
 
     public class Player
     {
-        public string name = "";
-        public string id = "";
+        public string name { get; set; }  = "";
+        public string id { get; set; }  = "";
     }
 
     public class DescriptionPayload
     {
-        public string text = "";
+        public string text { get; set; }  = "";
     }
 
 }
