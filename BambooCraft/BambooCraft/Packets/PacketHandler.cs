@@ -1,4 +1,5 @@
-﻿using BambooCraft.Utils;
+﻿using BambooCraft.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,79 +12,99 @@ namespace BambooCraft.Packets
     {
         private Logging myLogger = new Logging();
 
-        private byte[] bufferedData = new byte[4049];
+        private byte[] packetData = new byte[4049];
         private int packetSize = 0;
         private int packetID = -1;
         private string packetInfo = "UNKNOWN PACKET";
         private byte[] packetResponse = new byte[4049];
 
         public bool IsValidPacket = false;
+        public int lastByteIndex = 0;
 
         internal void ReadPacket(byte[] receivedData)
         {
-            myLogger.Log(Severity.Packet, "Reading packet...");
-
+            packetData = receivedData;
             // TODO READ PACKET HERE <---------->
-            var buf = new DataBuffer();
-            buf.BufferedData = receivedData;
-            buf.Size = ReadVarInt(receivedData[0]);
-            packetID = buf.ReadVarInt();
-            string PACKID = "0x" + packetID.ToString("X2");
-            switch(PACKID)
+            packetSize = readVarInt();
+            packetID = readVarInt();
+
+            myLogger.Log(Severity.Packet, "Reading packet...");
+            myLogger.Log(Severity.Packet, "Packet: " + packetID.ToString("X2") + " Size: " + packetSize);
+
+            switch(packetID)
             {
-                default:
-                    myLogger.Log(Severity.Critical, "UNKNOWN PACKET [" + PACKID + "]");
-                    break;
-                case "0x00":
-                    packetInfo = "HANDHSHAKE (" + PACKID + ")";
-                    IsValidPacket = true;
+                case 0:
+                    myLogger.Log(Severity.Packet, "Handshake-Packet!");
                     packetResponse = HandshakeResponse();
-                    break;
-                case "0xFE":
-                    packetInfo = "LEGACY PING (" + PACKID + ")";
                     IsValidPacket = true;
-                    packetResponse = LegacyPingResponse();
+                    packetInfo = "Handshake";
                     break;
             }
-            buf.Dispose();
+
+            
+
         }
-
-        private int ReadVarInt(byte data)
-        {
-            var value = 0;
-            var size = 0;
-            int b;
-
-            while (((b = data) & 0x80) == 0x80)
-            {
-                value |= (b & 0x7F) << (size++ * 7);
-                if (size > 5)
-                {
-                    return 0;
-                }
-            }
-            return value | ((b & 0x7F) << (size * 7));
-        }
-
-
         private byte[] HandshakeResponse()
         {
-            myLogger.Log(Severity.Packet, "Preparing SLP JSON response..");
-            string jsonData = System.IO.File.ReadAllText("serverListPacket.json");
-            byte[] dataToSend = Encoding.Default.GetBytes(jsonData);
-            myLogger.Log(Severity.Packet, "Ready to send SLP JSON response...");
-            return dataToSend;
-        }
+            PingPayload pl = new PingPayload();
+            pl.Icon = "";
+            pl.Motd = "BambooCraft 1.15.2";
+            PlayersPayload ppl = new PlayersPayload();
+            ppl.Max = 10;
+            ppl.Online = 0;
+            ppl.Sample = new List<Player>();
+            pl.Players = ppl;
+            VersionPayload vpl = new VersionPayload();
+            vpl.Name = "1.15.2";
+            vpl.Protocol = 578;
+            pl.Version = vpl;
 
-        private byte[] LegacyPingResponse()
-        {
-            return bufferedData;
+            string json = JsonConvert.SerializeObject(pl);
+            myLogger.Log(Severity.Packet, "Building PingPayload...");
+            byte[] dataToSend = Encoding.Default.GetBytes(json);
+            return dataToSend;
         }
 
         internal byte[] GetResponse()
         {
-            myLogger.Log(Severity.Packet, "Responding to Packet ID: " + packetID + " - " + packetInfo);
             return packetResponse;
+        }
+
+        public int readVarInt()
+        {
+            int numRead = 0;
+            int result = 0;
+            byte read;
+            do
+            {
+                read = ReadByte();
+                int value = (read & 0b01111111);
+                result |= (value << (7 * numRead));
+
+                numRead++;
+                if (numRead > 5)
+                {
+                    throw new Exception("VarInt is too big");
+                }
+            } while ((read & 0b10000000) != 0);
+
+            return result;
+        }
+
+        public byte ReadByte()
+        {
+            byte nextByte = packetData[lastByteIndex];
+            lastByteIndex++;
+            return nextByte;
+        }
+
+        public void Refresh()
+        {
+            packetData = new byte[4069];
+            lastByteIndex = 0;
+            packetID = -1;
+            packetInfo = "UNKNOWN PACKET";
+            packetSize = 0;
         }
     }
 }
