@@ -29,8 +29,8 @@ namespace BambooCraft
 #else
                  currentMode = "[RELEASE]"; 
 #endif
-            Console.WriteLine("BambooCraft by https://github.com/realTobby " + currentMode);
-
+            Console.Title = "BambooCraft by https://github.com/realTobby " + currentMode;
+            Console.ForegroundColor = ConsoleColor.Gray;
             Networking bambooCraft = new Networking(new Logging());
             bambooCraft.SetupServer();
             Console.ReadLine();
