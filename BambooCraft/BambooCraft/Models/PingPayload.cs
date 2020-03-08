@@ -7,54 +7,39 @@ using System.Threading.Tasks;
 
 namespace BambooCraft.Models
 {
-    class PingPayload
+    
+    public class PingPayload
     {
-        /// <summary>
-        /// Protocol that the server is using and the given name
-        /// </summary>
         [JsonProperty(PropertyName = "version")]
-        public VersionPayload Version { get; set; }
-
+        public VersionPayload vpl = new VersionPayload();
         [JsonProperty(PropertyName = "players")]
-        public PlayersPayload Players { get; set; }
-
+        public PlayerPayload ppl = new PlayerPayload();
         [JsonProperty(PropertyName = "description")]
-        public string Motd { get; set; }
-
-        /// <summary>
-        /// Server icon, important to note that it's encoded in base 64
-        /// </summary>
-        [JsonProperty(PropertyName = "favicon")]
-        public string Icon { get; set; }
+        public DescriptionPayload dpl = new DescriptionPayload();
+        public string favicon = "";
     }
-
-    class VersionPayload
+    public class VersionPayload
     {
-        [JsonProperty(PropertyName = "protocol")]
-        public int Protocol { get; set; }
-
-        [JsonProperty(PropertyName = "name")]
-        public string Name { get; set; }
+        public string name = "";
+        public int protocol = 0;
     }
 
-    class PlayersPayload
+    public class PlayerPayload
     {
-        [JsonProperty(PropertyName = "max")]
-        public int Max { get; set; }
-
-        [JsonProperty(PropertyName = "online")]
-        public int Online { get; set; }
-
-        [JsonProperty(PropertyName = "sample")]
-        public List<Player> Sample { get; set; }
+        public int max = 0;
+        public int online = 0;
+        public List<Player> sample = new List<Player>();
     }
 
-    class Player
+    public class Player
     {
-        [JsonProperty(PropertyName = "name")]
-        public string Name { get; set; }
-
-        [JsonProperty(PropertyName = "id")]
-        public string Id { get; set; }
+        public string name = "";
+        public string id = "";
     }
+
+    public class DescriptionPayload
+    {
+        public string text = "";
+    }
+
 }

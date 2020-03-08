@@ -99,7 +99,7 @@ namespace BambooCraft
                 }
             }
 
-            
+            myPacketHandler.Refresh();
         }
 
         private void SendCallbackAsync(IAsyncResult ar)
