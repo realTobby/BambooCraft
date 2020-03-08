@@ -111,9 +111,14 @@ namespace BambooCraft.Packets
 
 		public int ReadByte()
 		{
-			var returnData = BufferedData[_lastByte];
-			_lastByte++;
-			return returnData;
+				if (BufferedData != null)
+				{
+					var returnData = BufferedData[_lastByte];
+					_lastByte++;
+					return returnData;
+				}
+			
+			return -1;
 		}
 
 		public byte[] Read(int length)

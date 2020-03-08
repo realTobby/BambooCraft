@@ -102,7 +102,9 @@ namespace BambooCraft
             {
                 myLogger.Log(Severity.Error, "Last Packet is unknown, it was not handled!");
             }
+            myPacketHandler.Dispose();
         }
+
 
         private void SendCallbackAsync(IAsyncResult ar)
         {
