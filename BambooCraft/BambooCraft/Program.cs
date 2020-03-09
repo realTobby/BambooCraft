@@ -31,8 +31,8 @@ namespace BambooCraft
 #endif
             Console.Title = "BambooCraft by https://github.com/realTobby " + currentMode;
             Console.ForegroundColor = ConsoleColor.Gray;
-            Networking bambooCraft = new Networking(new Logging());
-            bambooCraft.SetupServer();
+            BambooCraftServer bambooCraft = new BambooCraftServer();
+            bambooCraft.StartServer();
             Console.ReadLine();
         }
     }

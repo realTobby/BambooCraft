@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BambooCraftServer.cs" />
     <Compile Include="Logging.cs" />
     <Compile Include="Models\PingPayload.cs" />
     <Compile Include="Networking.cs" />

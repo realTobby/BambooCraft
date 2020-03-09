@@ -52,7 +52,7 @@ namespace BambooCraft.Packets
                         case 1:
                             _bffr.Clear();
                             // status request
-                            myLogger.Log(Severity.Packet, "Building PingPayload...");
+                            myLogger.Log(Severity.Packet, "Building Handshake-Response...");
                             PingPayload pl = new PingPayload();
                             VersionPayload vpl = new VersionPayload();
                             vpl.name = "1.15.2";
@@ -79,8 +79,7 @@ namespace BambooCraft.Packets
 							WriteVarInt(0);
 							//WriteVarInt(packetData.Length);
 							WriteString(json);
-							//
-
+							SetDataSize(BufferedData.ToArray().Length);
 							break;
                         case 2:
 							// login request
@@ -123,8 +122,12 @@ namespace BambooCraft.Packets
 		public byte[] Read(int length)
 		{
 			var buffered = new byte[length];
-					Array.Copy(BufferedData, _lastByte, buffered, 0, length);
-					_lastByte += length;
+			if(BufferedData.Length >= length)
+			{
+				Array.Copy(BufferedData, _lastByte, buffered, 0, length);
+				_lastByte += length;
+			}
+					
 			
 			return buffered;
 		}
