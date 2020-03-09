@@ -20,8 +20,6 @@ namespace BambooCraft.Packets
         public bool IsValidPacket = false;
         public int lastByteIndex = 0;
 
-        public List<byte> responseData = new List<byte>();
-
 		private readonly List<byte> _bffr = new List<byte>();
 
 		internal void ReadPacket(byte[] receivedData)
@@ -52,8 +50,7 @@ namespace BambooCraft.Packets
                     switch(nextState)
                     {
                         case 1:
-                            responseData.Clear();
-                            responseData = new List<byte>();
+                            _bffr.Clear();
                             // status request
                             myLogger.Log(Severity.Packet, "Building PingPayload...");
                             PingPayload pl = new PingPayload();
@@ -76,14 +73,15 @@ namespace BambooCraft.Packets
 
                             string json = JsonConvert.SerializeObject(pl);
                             byte[] packetData = Encoding.UTF8.GetBytes(json);
-                            Utils.HexDump.DumpHex(packetData);
+                            
 
-							WriteVarInt(packetData.Length + 2);
+							WriteVarInt(packetData.Length+2);
 							WriteVarInt(0);
+							//WriteVarInt(packetData.Length);
 							WriteString(json);
+							//
 
-
-                            break;
+							break;
                         case 2:
 							// login request
 							IsValidPacket = false;
@@ -91,8 +89,6 @@ namespace BambooCraft.Packets
                     }
                     break;
             }
-            System.IO.File.WriteAllText("hexdump.txt", Utils.HexDump.DumpHex(responseData.ToArray()));
-
         }
 
 		public void SetDataSize(int size)
@@ -111,21 +107,25 @@ namespace BambooCraft.Packets
 
 		public int ReadByte()
 		{
-				if (BufferedData != null)
+			if (BufferedData != null)
+			{
+				if(BufferedData.Length >= _lastByte+1)
 				{
 					var returnData = BufferedData[_lastByte];
 					_lastByte++;
 					return returnData;
 				}
-			
-			return -1;
+				return 0;
+			}
+			return 0;
 		}
 
 		public byte[] Read(int length)
 		{
 			var buffered = new byte[length];
-			Array.Copy(BufferedData, _lastByte, buffered, 0, length);
-			_lastByte += length;
+					Array.Copy(BufferedData, _lastByte, buffered, 0, length);
+					_lastByte += length;
+			
 			return buffered;
 		}
 
@@ -168,7 +168,7 @@ namespace BambooCraft.Packets
 				value |= (b & 0x7F) << (size++ * 7);
 				if (size > 5)
 				{
-					throw new Exception("VarInt too long. Hehe that's punny.");
+					throw new Exception("VarInt too big");
 				}
 			}
 			return value | ((b & 0x7F) << (size * 7));
@@ -358,7 +358,7 @@ namespace BambooCraft.Packets
 		public void WriteString(string data)
 		{
 			var stringData = Encoding.UTF8.GetBytes(data);
-			WriteVarInt(stringData.Length);
+			//WriteVarInt(stringData.Length);
 			Write(stringData);
 		}
 
@@ -445,6 +445,7 @@ namespace BambooCraft.Packets
 		public byte[] GetResponse()
 		{
 			System.IO.File.WriteAllText("hexdump.txt", Utils.HexDump.DumpHex(_bffr.ToArray()));
+			Utils.HexDump.DumpHex(_bffr.ToArray());
 			return _bffr.ToArray();
 		}
 	}
