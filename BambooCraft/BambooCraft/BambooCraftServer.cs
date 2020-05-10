@@ -12,37 +12,66 @@ namespace BambooCraft
 {
     public class BambooCraftServer
     {
+        BambooCraftServer bcs;
         Logging myLogger = new Logging();
-        PacketHandler myPacketHandler = new PacketHandler();
-        TcpListener listener = new TcpListener(IPAddress.Any, 419);
-        public void StartServer()
+
+        private void HandleNewClient(Socket client)
         {
-            listener.Start();
-
-            while (true)
+            while (client.Connected == true)
             {
-                Socket client = listener.AcceptSocket();
-                myLogger.Log(Severity.Network, "New Connection");
-
-                var childSocketThread = new Thread(() =>
+                myLogger.Log(Severity.Network, "Looking for data...");
+                byte[] data = new byte[1024];
+                if (client.Connected == true)
                 {
-                    byte[] data = new byte[4096];
-                    int receivedSize = client.Receive(data);
-                    myPacketHandler.ReadPacket(data);
-                    if(myPacketHandler.Size > 0)
+                    try
                     {
-                        int responseSize = client.Send(myPacketHandler.GetResponse());
-                        myPacketHandler.Dispose();
-                        myLogger.Log(Severity.Network, "Response sent [" + responseSize + "]");
+                        int size = client.Receive(data);
+                        myLogger.Log(Severity.Network, "Data recieved: " + System.Text.Encoding.ASCII.GetString(data).Trim());
+                        client.Send(data, 0, size, SocketFlags.None);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        myLogger.Log(Severity.Network, "Last Packet got no response!");
+                        myLogger.Log(Severity.Exception, "Connection was closed...");
                     }
-                });
-                childSocketThread.Start();
+
+                }
+                myLogger.Log(Severity.Network, "Connection was closed");
             }
         }
 
+        public void StartupServer()
+        {
+
+            string ipAddress = "127.0.0.1";
+            int port = 41900;
+
+            Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            IPEndPoint ep = new IPEndPoint(IPAddress.Parse(ipAddress), port);
+            serverSocket.Bind(ep);
+            serverSocket.Listen(100);
+            myLogger.Log(Severity.Network, "Server started...");
+            Socket clientSocket = default(Socket);
+            while(true)
+            {
+                clientSocket = serverSocket.Accept();
+                myLogger.Log(Severity.Network, string.Format("New Client connected..."));
+                Thread newClientThread = new Thread(new ThreadStart(() => HandleNewClient(clientSocket)));
+                Thread connectionSafe = new Thread(new ThreadStart(() => CheckConnection(clientSocket, newClientThread)));
+                connectionSafe.Start();
+                newClientThread.Start();
+            }
+        }
+
+        private void CheckConnection(Socket clientSocket, Thread newClientThread)
+        {
+            while(true)
+            {
+                if(clientSocket.Connected == false)
+                {
+                    myLogger.Log(Severity.Warning, "Client disconnected!");
+                    newClientThread.Abort();
+                }
+            } 
+        }
     }
 }
