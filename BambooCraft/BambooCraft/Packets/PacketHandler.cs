@@ -43,15 +43,12 @@ namespace BambooCraft.Packets
                     string host = ReadString();
                     ushort port = ReadUShort();
                     var nextState = ReadVarInt();
-
-                    
-                    IsValidPacket = true;
-
                     switch(nextState)
                     {
                         case 1:
                             _bffr.Clear();
-                            // status request
+							// status request
+							myLogger.Log(Severity.Critical, "STATUS REQUEST");
                             myLogger.Log(Severity.Packet, "Building Handshake-Response...");
                             PingPayload pl = new PingPayload();
                             VersionPayload vpl = new VersionPayload();
@@ -60,33 +57,39 @@ namespace BambooCraft.Packets
                             pl.vpl = vpl;
 
                             PlayerPayload ppl = new PlayerPayload();
-                            ppl.max = 10;
+                            ppl.max = -1;
                             ppl.online = 0;
                             ppl.sample = new List<Player>();
                             pl.ppl = ppl;
 
                             DescriptionPayload dpl = new DescriptionPayload();
-                            dpl.text = "Test";
+                            dpl.text = "BambooCraft DEV Server!";
                             pl.dpl = dpl;
 
                             pl.favicon = "data:image/png;base64,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";
 
                             string json = JsonConvert.SerializeObject(pl);
                             byte[] packetData = Encoding.UTF8.GetBytes(json);
-                            
 
-							WriteVarInt(packetData.Length+2);
-							WriteVarInt(0);
-							//WriteVarInt(packetData.Length);
+							WriteInt(0);
+							WriteVarInt(packetData.Length);
 							WriteString(json);
-							SetDataSize(BufferedData.ToArray().Length);
+							SetDataSize(packetData.ToArray().Length);
+							IsValidPacket = true;
 							break;
                         case 2:
 							// login request
 							IsValidPacket = false;
 							break;
+						default:
+							myLogger.Log(Severity.Critical, "Default Packet...");
+							IsValidPacket = false;
+							break;
                     }
                     break;
+				case 122:
+					myLogger.Log(Severity.Critical, "UNKNOWN PACKET");
+					break;
             }
         }
 

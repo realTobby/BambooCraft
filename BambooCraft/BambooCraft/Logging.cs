@@ -23,6 +23,7 @@ namespace BambooCraft
         {
             SetColor(severity);
             Console.WriteLine("[" + severity.ToString() + "] " + Message);
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         private void SetColor(Severity severity)

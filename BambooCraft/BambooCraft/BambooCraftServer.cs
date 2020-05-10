@@ -12,36 +12,11 @@ namespace BambooCraft
 {
     public class BambooCraftServer
     {
-        BambooCraftServer bcs;
+        Networking network = new Networking();
         Logging myLogger = new Logging();
-
-        private void HandleNewClient(Socket client)
-        {
-            while (client.Connected == true)
-            {
-                myLogger.Log(Severity.Network, "Looking for data...");
-                byte[] data = new byte[1024];
-                if (client.Connected == true)
-                {
-                    try
-                    {
-                        int size = client.Receive(data);
-                        myLogger.Log(Severity.Network, "Data recieved: " + System.Text.Encoding.ASCII.GetString(data).Trim());
-                        client.Send(data, 0, size, SocketFlags.None);
-                    }
-                    catch (Exception ex)
-                    {
-                        myLogger.Log(Severity.Exception, "Connection was closed...");
-                    }
-
-                }
-                myLogger.Log(Severity.Network, "Connection was closed");
-            }
-        }
 
         public void StartupServer()
         {
-
             string ipAddress = "127.0.0.1";
             int port = 41900;
 
@@ -55,23 +30,9 @@ namespace BambooCraft
             {
                 clientSocket = serverSocket.Accept();
                 myLogger.Log(Severity.Network, string.Format("New Client connected..."));
-                Thread newClientThread = new Thread(new ThreadStart(() => HandleNewClient(clientSocket)));
-                Thread connectionSafe = new Thread(new ThreadStart(() => CheckConnection(clientSocket, newClientThread)));
-                connectionSafe.Start();
+                Thread newClientThread = new Thread(new ThreadStart(() => network.HandleClient(clientSocket)));
                 newClientThread.Start();
             }
-        }
-
-        private void CheckConnection(Socket clientSocket, Thread newClientThread)
-        {
-            while(true)
-            {
-                if(clientSocket.Connected == false)
-                {
-                    myLogger.Log(Severity.Warning, "Client disconnected!");
-                    newClientThread.Abort();
-                }
-            } 
         }
     }
 }
