@@ -24,7 +24,7 @@ namespace BambooCraft
             IPEndPoint ep = new IPEndPoint(IPAddress.Parse(ipAddress), port);
             serverSocket.Bind(ep);
             serverSocket.Listen(100);
-            myLogger.Log(Severity.Network, "Server started...");
+            myLogger.Log(Severity.Network, "Server listening on: " + ipAddress + " and port: " + port);
             Socket clientSocket = default(Socket);
             while(true)
             {
