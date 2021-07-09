@@ -1,5 +1,7 @@
 # BambooCraft
-Custom Minecraft Server for Version 1.15.2
+Custom Minecraft Server for Version (not decided yet)
+
+Maybe Alpha or Beta or a newer Version of Minecraft
 
 (WIP)
 
