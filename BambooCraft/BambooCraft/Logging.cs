@@ -19,16 +19,33 @@ namespace BambooCraft
     }
     public class Logging
     {
-        public void Log(Severity severity, string Message)
+        private Severity loggingSeverity;
+
+        public Logging(Severity loggingSeverity)
         {
-            SetColor(severity);
-            Console.WriteLine("[" + severity.ToString() + "] " + Message);
+            this.loggingSeverity = loggingSeverity;
+        }
+
+        public void Log(string Message)
+        {
+            SetColor();
+            Console.WriteLine("[" + loggingSeverity.ToString() + "] " + Message);
             Console.ForegroundColor = ConsoleColor.White;
         }
 
-        private void SetColor(Severity severity)
+        public void Log(Severity loggingSeverity, string Message)
         {
-            switch(severity)
+            Severity lastSeverity = this.loggingSeverity;
+            this.loggingSeverity = loggingSeverity;
+            SetColor();
+            Console.WriteLine("[" + loggingSeverity.ToString() + "] " + Message);
+            Console.ForegroundColor = ConsoleColor.White;
+            this.loggingSeverity = lastSeverity;
+        }
+
+        private void SetColor()
+        {
+            switch(loggingSeverity)
             {
                 case Severity.Information:
                     Console.ForegroundColor = ConsoleColor.White;

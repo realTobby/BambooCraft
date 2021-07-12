@@ -13,8 +13,27 @@ namespace BambooCraft
 {
     public class Networking
     {
-        Logging myLogger = new Logging();
+        Logging myNetworkLogger = new Logging(Severity.Network);
         PacketHandler myPacketHandler = new PacketHandler();
+
+        public Networking(string ip, int port)
+        {
+            Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            IPEndPoint ep = new IPEndPoint(IPAddress.Parse(ip), port);
+            serverSocket.Bind(ep);
+            serverSocket.Listen(100);
+            myNetworkLogger.Log("Server listening on: " + ip + " and port: " + port);
+            Socket clientSocket = default(Socket);
+            while (true)
+            {
+                clientSocket = serverSocket.Accept();
+                myNetworkLogger.Log(string.Format("New Client connected..."));
+                Thread newClientThread = new Thread(new ThreadStart(() => HandleClient(clientSocket)));
+                newClientThread.Start();
+            }
+        }
+
+
         public void HandleClient(Socket client)
         {
             while (client.Connected == true)
@@ -30,17 +49,18 @@ namespace BambooCraft
                         {
                             int responseSize = client.Send(myPacketHandler.GetResponse());
                             myPacketHandler.Dispose();
-                            myLogger.Log(Severity.Network, "Response sent [" + responseSize + "]");
+                            myNetworkLogger.Log("Response sent [" + responseSize + "]");
                         }
                         else
                         {
-                            myLogger.Log(Severity.Network, "Last Packet got no response!");
+                            myNetworkLogger.Log("Last Packet got no response!");
                         }
                         break;
                     }
                     catch (Exception ex)
                     {
-                        myLogger.Log(Severity.Exception, "Connection was closed...");
+                        myNetworkLogger.Log("Server ran into a problem...");
+                        myNetworkLogger.Log("Exception: " + ex.Message);
                         break;
                     }
                 }

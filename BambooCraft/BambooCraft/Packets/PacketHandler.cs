@@ -11,7 +11,7 @@ namespace BambooCraft.Packets
 {
     public class PacketHandler
     {
-        private Logging myLogger = new Logging();
+        private Logging myPacketLogger = new Logging(Severity.Packet);
 
         public byte[] BufferedData = new byte[4096];
         private int _lastByte;
@@ -31,13 +31,13 @@ namespace BambooCraft.Packets
             var packetSize = ReadVarInt();
             var packetID = ReadVarInt();
 
-            myLogger.Log(Severity.Packet, "Reading packet...");
-            myLogger.Log(Severity.Packet, "Packet: " + packetID.ToString("X2") + " Size: " + packetSize);
+			myPacketLogger.Log("Reading packet...");
+			myPacketLogger.Log("Packet: " + packetID.ToString("X2") + " Size: " + packetSize);
 
             switch(packetID)
             {
                 case 0:
-                    myLogger.Log(Severity.Packet, "Handshake-Packet!");
+					myPacketLogger.Log("Handshake-Packet!");
 
                     var protocol = ReadVarInt();
                     string host = ReadString();
@@ -48,8 +48,8 @@ namespace BambooCraft.Packets
                         case 1:
                             _bffr.Clear();
 							// status request
-							myLogger.Log(Severity.Critical, "STATUS REQUEST");
-                            myLogger.Log(Severity.Packet, "Building Handshake-Response...");
+							myPacketLogger.Log(Severity.Critical, "STATUS REQUEST");
+							myPacketLogger.Log(Severity.Packet, "Building Handshake-Response...");
                             PingPayload pl = new PingPayload();
                             VersionPayload vpl = new VersionPayload();
                             vpl.name = "1.15.2";
@@ -82,13 +82,13 @@ namespace BambooCraft.Packets
 							IsValidPacket = false;
 							break;
 						default:
-							myLogger.Log(Severity.Critical, "Default Packet...");
+							myPacketLogger.Log(Severity.Critical, "Default Packet...");
 							IsValidPacket = false;
 							break;
                     }
                     break;
 				case 122:
-					myLogger.Log(Severity.Critical, "UNKNOWN PACKET");
+					myPacketLogger.Log(Severity.Critical, "UNKNOWN PACKET");
 					break;
             }
         }
