@@ -25,6 +25,7 @@ namespace BambooCraft
             Console.ForegroundColor = ConsoleColor.Gray;
             BambooCraftServer bambooCraft = new BambooCraftServer();
             bambooCraft.StartupServer();
+            Console.WriteLine("End of Server, Server is stopped!");
             Console.ReadLine();
         }
     }

@@ -12,12 +12,9 @@ namespace BambooCraft
 {
     public class BambooCraftServer
     {
-        public bool isServerRunning = false;
-
         public void StartupServer()
         {
-            isServerRunning = true;
-            Networking network = new Networking("127.0.0.1", 41900);
+            Networking network = new Networking("127.0.0.1", 41900, 10);
         }
     }
 }
